@@ -1,20 +1,21 @@
+import os
 import numpy as np
+import pandas as pd
 from tensorflow.keras.utils import load_img, img_to_array
 from tensorflow.keras.models import load_model
 import tensorflow as tf
 import keras
 import matplotlib.cm as cm
-import cv2
-class Helper(object):
+from werkzeug.utils import secure_filename
 
+class Helper(object):
     def classification(self, img_path):
         model = load_model("models/model7.h5")
-        image = load_img("static/uploaded_img/" + img_path, target_size=(224, 224), color_mode="grayscale")
-        last_conv_layer_name = "block5_conv3"
+
+        image = load_img("static/uploaded_img/" + img_path, target_size=(224, 224))
         img = img_to_array(image)
         img = np.expand_dims(img, axis=0)
         img = img.astype('float32') / 255
-        img = np.repeat(img, 3, axis=-1)
 
         preds = model.predict(img)
         i = np.argmax(preds, axis=1)
@@ -24,10 +25,44 @@ class Helper(object):
         predictions = [(classes[i], round(probability * 100, 2)) for i, probability in zip(i, max_probabilities)]
         prediction, prob = predictions[0]
 
+        # Use the identified last convolutional layer
+        last_conv_layer_name = "block5_conv3"
         heatmap = self.make_heatmap(img, model, last_conv_layer_name)
         self.save_gradcam(img_path, heatmap)
 
         return prediction, prob
+
+    def classification_list(self, csv_filename):
+        model = load_model("models/model3.h5")
+        predictions = []
+
+        # Load CSV data
+        csv_data = pd.read_csv(csv_filename)
+
+        for index, row in csv_data.iterrows():
+            filename = secure_filename(row['path'])
+            image_path = row['path']
+            actual_class = row['class']
+
+            image = load_img(image_path, target_size=(224, 224))
+            img = img_to_array(image)
+            img = np.expand_dims(img, axis=0)
+            img = img.astype('float32') / 255
+
+            preds = model.predict(img)
+            i = np.argmax(preds, axis=1)
+
+            classes = ["Cataract", "Diabetic Retinopathy", "Glaucoma", "Normal"]
+            max_probabilities = np.max(preds, axis=1)
+            prediction = classes[i[0]]
+            prob = round(max_probabilities[0] * 100, 2)
+
+            # Get just the filename from the full path
+            filename_only = os.path.basename(image_path)
+
+            predictions.append((index + 1, filename_only, prediction, actual_class, prob))
+
+        return predictions
 
     def make_heatmap(self, img_array, model, last_conv_layer_name, pred_index=None):
         grad_model = keras.models.Model(

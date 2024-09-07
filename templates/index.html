@@ -37,7 +37,7 @@
                   name="imageFile"
                   id="imageFile"
                   type="file"
-                  accept=".jpg, .png, .jpeg"
+                  accept=".jpg, .png, .jpeg, .csv"
                   required
                 />
               </div>
@@ -55,14 +55,17 @@
 
 <script>
   document
-    .getElementById("imageFile")
-    .addEventListener("change", function (event) {
-      const file = event.target.files[0];
+  .getElementById("imageFile")
+  .addEventListener("change", function (event) {
+    const files = event.target.files;
+    const imageContainer = document.getElementById("image-container");
+
+    if (files.length === 1) {
+      const file = files[0];
       const reader = new FileReader();
 
       reader.onload = function (e) {
         const imageUrl = e.target.result;
-        const imageContainer = document.getElementById("image-container");
         imageContainer.innerHTML = `<img src="${imageUrl}" id="uploaded-image" class="img-fluid" alt="Uploaded Image">`;
 
         // Mengatur gambar untuk mengikuti lebar dan tinggi maksimum container
@@ -81,5 +84,8 @@
       };
 
       reader.readAsDataURL(file);
-    });
+    } else {
+      imageContainer.innerHTML = '';
+    }
+  });
 </script>
